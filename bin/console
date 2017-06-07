@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+$LOAD_PATH.unshift File.expand_path('../lib', __FILE__)
+require "bundler/setup"
+require "threatstack"
+require "pry"
+
+Pry.config.prompt = lambda do |context, nesting, pry|
+  "[threatstack] #{context}> "
+end
+
+Pry.start
