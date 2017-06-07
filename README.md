@@ -1,8 +1,6 @@
 # Threatstack
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/threatstack`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+Threatstack is a tool for monitoring your infrastructure and hosts for malicious or suspicious activity. They have this handy little API that I decided to write a Ruby wrapper for. This is a very thin wrapper that only transforms keys for the purpose of changing them to snake_case like the rest of the ruby world. Otherwise, this maps very closely to the API docs found here: https://app.threatstack.com/api/docs
 
 ## Installation
 
