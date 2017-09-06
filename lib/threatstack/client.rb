@@ -1,67 +1,66 @@
 require 'open-uri'
 require 'httparty'
-require 'threatstack/alert/response'
-require 'threatstack/alert/alert'
-require 'threatstack/agent/response'
-require 'threatstack/agent/agent'
-require 'threatstack/policy/response'
-require 'threatstack/policy/policy'
-require 'threatstack/organization/response'
-require 'threatstack/log/response'
+require 'threatstack/response'
+require 'threatstack/entities/agent'
+require 'threatstack/entities/alert'
+require 'threatstack/entities/log'
+require 'threatstack/entities/organization'
+require 'threatstack/entities/policy'
 
 module Threatstack
   class ThreatstackError < StandardError; end
 
   class Client
-    THREATSTACK_API = 'https://app.threatstack.com/api/v1'
+    THREATSTACK_API = 'https://app.threatstack.com/api'.freeze
 
-    attr_reader :token, :org_id
+    attr_reader :token, :org_id, :api_version
 
-    def initialize(token)
+    def initialize(token, api_version = 'v1')
+      @api_version = api_version
       @token = token
-    end
-
-    def alerts(params = {})
-      response = do_request(:get, 'alerts', params)
-      Alert::Response.new(response).alerts
-    end
-
-    def alert(alert_id, params = {})
-      raise ThreatstackError, "Must specify alert id" unless alert_id
-      response = do_request(:get, "alerts/#{alert_id}", params)
-      Alert::Alert.new(response)
     end
 
     def agents(params = {})
       response = do_request(:get, 'agents', params)
-      Agent::Response.new(response).agents
+      Response.new(:agent, response).agents
     end
 
     def agent(agent_id, params = {})
       raise ThreatstackError, "Must specify agent id" unless agent_id
       response = do_request(:get, "agents/#{agent_id}", params)
-      Agent::Agent.new(response)
+      Agent.new(response)
+    end
+
+    def alerts(params = {})
+      response = do_request(:get, 'alerts', params)
+      Response.new(:alert, response).alerts
+    end
+
+    def alert(alert_id, params = {})
+      raise ThreatstackError, "Must specify alert id" unless alert_id
+      response = do_request(:get, "alerts/#{alert_id}", params)
+      Alert.new(response)
     end
 
     def policies(params = {})
       response = do_request(:get, 'policies', params)
-      Policy::Response.new(response).policies
+      Response.new(:policy, response).policies
     end
 
     def policy(policy_id, params = {})
       raise ThreatstackError, "Must specify policy id" unless policy_id
       response = do_request(:get, "policies/#{policy_id}", params)
-      Policy::Policy.new(response)
+      Policy.new(response)
     end
 
     def organizations(params = {})
       response = do_request(:get, 'organizations', params)
-      Organization::Response.new(response).organizations
+      Response.new(:organization, response).organizations
     end
 
     def logs(params = {})
       response = do_request(:get, 'logs', params)
-      Log::Response.new(response).logs
+      Response.new(:log, response).logs
     end
 
     def search(query, params = {})
@@ -84,7 +83,7 @@ module Threatstack
       params[:fields] = params[:fields].join(',') if params[:fields]&.is_a?(Array)
 
       query = params.each_pair.map { |k, v| "#{k}=#{v}" }.join('&')
-      uri = "#{THREATSTACK_API}/#{path}"
+      uri = "#{THREATSTACK_API}/#{api_version}/#{path}"
       uri += "?#{URI::encode(query)}" if params.any?
       uri
     end
