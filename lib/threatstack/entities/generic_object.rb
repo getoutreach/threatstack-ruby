@@ -1,7 +1,5 @@
-require 'threatstack/serializable'
-
 module Threatstack
-  class Log
+  class GenericObject
     include Serializable
   end
 end

@@ -3,77 +3,154 @@ require 'httparty'
 require 'threatstack/response'
 require 'threatstack/entities/agent'
 require 'threatstack/entities/alert'
-require 'threatstack/entities/log'
-require 'threatstack/entities/organization'
-require 'threatstack/entities/policy'
+require 'threatstack/entities/ruleset'
+require 'threatstack/entities/rule'
+
 
 module Threatstack
   class ThreatstackError < StandardError; end
 
   class Client
-    THREATSTACK_API = 'https://app.threatstack.com/api'.freeze
+    THREATSTACK_API = 'https://api.threatstack.com'.freeze
+    attr_reader :token, :org_id, :api_version, :last_pagination_token
 
-    attr_reader :token, :org_id, :api_version
-
-    def initialize(token, api_version = 'v1')
+    def initialize(token, organization_id: nil, api_version: 'v2')
       @api_version = api_version
       @token = token
+      @org_id = organization_id
+      if api_version == 'v1'
+        raise ThreatstackError, "This version of threatstack-ruby does not support Threatstack API v1"
+      end
     end
+
+    ### ALERTS ###
 
     def agents(params = {})
       response = do_request(:get, 'agents', params)
-      Response.new(:agent, response).agents
+      Response.new(response['agents'], self, entity: :agent).agents
     end
 
     def agent(agent_id, params = {})
       raise ThreatstackError, "Must specify agent id" unless agent_id
       response = do_request(:get, "agents/#{agent_id}", params)
-      Agent.new(response)
+      Agent.new(response, self)
     end
 
+    ### ALERTS ###
     def alerts(params = {})
       response = do_request(:get, 'alerts', params)
-      Response.new(:alert, response).alerts
+      Response.new(response['alerts'], self, entity: :alert).alerts
+    end
+
+    def dismissed_alerts(params = {})
+      response = do_request(:get, 'alerts/dismissed', params)
+      Response.new(response['alerts'], self, entity: :alert).alerts
     end
 
     def alert(alert_id, params = {})
       raise ThreatstackError, "Must specify alert id" unless alert_id
       response = do_request(:get, "alerts/#{alert_id}", params)
-      Alert.new(response)
+      Alert.new(response, self)
     end
 
-    def policies(params = {})
-      response = do_request(:get, 'policies', params)
-      Response.new(:policy, response).policies
+    def severity_counts(params = {})
+      response = do_request(:get, "alerts/severity-counts", params)
+      Response.new(response['severityCounts'], self, entity: :severity_count).list
     end
 
-    def policy(policy_id, params = {})
-      raise ThreatstackError, "Must specify policy id" unless policy_id
-      response = do_request(:get, "policies/#{policy_id}", params)
-      Policy.new(response)
+    def event(alert_id, event_id, params = {})
+      response = do_request(:get, "alerts/#{alert_id}/events/#{event_id}", params)
+      GenericObject.new(response['details'], self, entity: :event)
     end
 
-    def organizations(params = {})
-      response = do_request(:get, 'organizations', params)
-      Response.new(:organization, response).organizations
+    ### CVEs ###
+
+    def vulnerabilities(params = {})
+      uri = "vulnerabilities"
+      uri += "/suppressed" if params[:suppressed]
+      response = do_request(:get, uri, params)
+      Response.new(response['cves'], self, entity: :cve).cves
     end
 
-    def logs(params = {})
-      response = do_request(:get, 'logs', params)
-      Response.new(:log, response).logs
+    def vulnerability(vuln_id, params = {})
+      raise ThreatstackError, "Must specify vulnerability id" unless vuln_id
+      response = do_request(:get, "vulnerabilities/#{vuln_id}", params)
+      Cve.new(response, self)
     end
 
-    def search(query, params = {})
-      logs(params.merge(q: query))
+    def package_vulnerabilities(package, params = {})
+      raise ThreatstackError, "Must specify package" unless package
+      uri = "vulnerabilities/package/#{package}"
+      uri += "/suppressed" if params[:suppressed]
+      response = do_request(:get, uri, params)
+      Response.new(response['packages'], self, entity: :package).list
+    end
+
+    def server_vulnerabilities(server, params = {})
+      raise ThreatstackError, "Must specify server" unless server
+      uri = "vulnerabilities/server/#{server}"
+      uri += "/suppressed" if params[:suppressed]
+      response = do_request(:get, uri, params)
+      response['cves']
+    end
+
+    def cves_by_agent(agent, params = {})
+      raise ThreatstackError, "Must specify agent" unless agent
+      uri = "vulnerabilities/agent/#{agent}"
+      uri += "/suppressed" if params[:suppressed]
+      response = do_request(:get, uri, params)
+      response['cves']
+    end
+
+    def vulnerability_suppressions(params = {})
+      response = do_request(:get, "vulnerabilities/suppressions", params)
+      Response.new(response['suppressions'], self, entity: :suppression).list
+    end
+
+    ### Rulesets ###
+
+    def rulesets(params = {})
+      response = do_request(:get, 'rulesets', params)
+      Response.new(response['rulesets'], self, entity: :ruleset).rulesets
+    end
+
+    def ruleset(ruleset_id, params = {})
+      raise ThreatstackError, "Must specify ruleset id" unless ruleset_id
+      response = do_request(:get, "rulesets/#{ruleset_id}", params)
+      Ruleset.new(response, self)
+    end
+
+    ### Rules ###
+
+    def rules(ruleset_id, params = {})
+      response = do_request(:get, "rulesets/#{ruleset_id}/rules", params)
+      Response.new(response['rules'], self, entity: :rule).rules
+    end
+
+    def rule(ruleset_id, rule_id, params = {})
+      raise ThreatstackError, "Must specify ruleset id and rule id" unless ruleset_id && rule_id
+      response = do_request(:get, "rulesets/#{ruleset_id}/rules/#{rule_id}", params)
+      Rule.new(response, self)
+    end
+
+    ### Servers ###
+
+    def servers(monitored = true, params = {})
+      uri = "servers"
+      uri += "/non-monitored" unless monitored
+      response = do_request(:get, uri, params)
+      Response.new(response['servers'], self, entity: :server).list
     end
 
     private
 
     def do_request(method, path, params = {})
-      response = HTTParty.public_send(method, build_uri(path, params), headers: { "Authorization" => token })
+      headers = { "Authorization" => token, "Organization-Id" => org_id }
+      response = HTTParty.public_send(method, build_uri(path, params), headers: headers).parsed_response
       if response.instance_of?(Hash) && response['status'] == 'error'
         raise ThreatstackError, response['message']
       end
+      @last_pagination_token = response['token']
       response
     end
 
@@ -87,6 +164,5 @@ module Threatstack
       uri += "?#{URI::encode(query)}" if params.any?
       uri
     end
-
   end
 end

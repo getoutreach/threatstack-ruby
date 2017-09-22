@@ -1,6 +1,8 @@
 # Threatstack
 
-Threatstack is a tool for monitoring your infrastructure and hosts for malicious or suspicious activity. They have this handy little API that I decided to write a Ruby wrapper for. This is a very thin wrapper that only transforms keys for the purpose of changing them to snake_case like the rest of the ruby world. Otherwise, this maps very closely to the API docs found here: https://app.threatstack.com/api/docs
+Threatstack is a tool for monitoring your infrastructure and hosts for malicious or suspicious activity. They have this handy little API that I decided to write a Ruby wrapper for. This is a very thin wrapper that only transforms keys for the purpose of changing them to snake_case like the rest of the ruby world. Otherwise, this maps very closely to the API docs found here: https://apidocs.threatstack.com/v2
+
+### NOTE: From version 1.0.0 onward, only Threatstack API v2 is supported
 
 ## Installation
 
@@ -23,30 +25,33 @@ Or install it yourself as:
 You can access all attributes on responses thanks to the method_missing function in Ruby. We only munged the attributes that don't correspond to snake_case. If you want to see a list of all available attributes for a serializable response object, simply do something like this:
 
 ```
-client = Threatstack::Client.new(API_TOKEN)
-client.policies.first.attrs
-=> [:rules,
- :id,
- :name,
+client = Threatstack::Client.new(API_TOKEN, organization_id: ORG_ID)
+[threatstack] main> ts.alerts.first.attrs
+=> [:id,
+ :title,
+ :type,
  :created_at,
- :updated_at,
- :enabled,
- :agent_count,
- :alert_rule_count,
- :description,
- :organization_id,
- :alert_policy_id,
- :alert_policy,
- :file_integrity_rules]
+ :event_count,
+ :is_dismissed,
+ :dismissed_at,
+ :dismissed_reason,
+ :dismissed_reason_text,
+ :dismissed_by,
+ :severity,
+ :agent_id,
+ :rule_id,
+ :ruleset_id,
+ :event_ids]
+
  ```
 
 ### Alerts
 
 ```
-client = Threatstack::Client.new(API_TOKEN)
+client = Threatstack::Client.new(API_TOKEN, organization_id: ORG_ID)
 ## All these are optional url params. See the Threatstack API Docs
 alert = client.alerts(start: 3.days.ago, end: Time.now, count: 5).last
-=> #<Threatstack::Alert::Alert:0x007fde0b01cbd8
+=> #<Threatstack::Alert:0x007fde0b01cbd8
  @raw=
   {"created_at"=>1496850520000,
    "expires_at"=>1496936920000,
@@ -54,22 +59,15 @@ alert = client.alerts(start: 3.days.ago, end: Time.now, count: 5).last
    "count"=>4,
    "title"=>"CloudTrail Activity : EC2 Service Policy Changes : CreateVolume by ryan_canty",
    ...
-event = alert.latest_events.last
-=> <Threatstack::Alert::Event:0x007fde0ca08420
- @raw=
-  {"user"=>"ryan_canty",
-   "userType"=>"IAMUser",
-   ...
-user_that_caused_the_event = event.user_identity.arn
-=> "arn:aws:iam::1234567890:user/ryan_canty"
-
+count = alert.count
+=> 4
 ```
 
 You can also limit the response if that's important to you:
 
 ```
 client.alerts(fields: ['title', 'alerts'])
-=> [#<Threatstack::Alert::Alert:0x007fd61348c768
+=> [#<Threatstack::Alert:0x007fd61348c768
   @raw={"title"=>"CloudTrail Activity (IAM Policy Changes) : CreateAccessKey by ryan_canty", "severity"=>2}>]
 ```
 
@@ -83,36 +81,19 @@ client.alert('1234567890')
 
 ```
 client.agents
-=>  [#<Threatstack::Agent::Agent:0x007fa262b0b2e0 @raw={...}> ]
-client.agent
-=>  #<Threatstack::Agent::Agent:0x007fa262b0b2e0 @raw={...}>
+=>  [#<Threatstack::Response:0x007fa262b0b2e0 @raw={...}> ]
+client.agent('123123123')
+=>  #<Threatstack::Agent:0x007fa262b0b2e0 @raw={...}>
 ```
 
-
-### Policies
-
-```
-client.policies
-=>  [#<Threatstack::Policy::Policy:0x007fa262b0b2e0 @raw={...}> ]
-client.policy
-=>  #<Threatstack::Policy::Policy:0x007fa262b0b2e0 @raw={...}>
-```
-
-### Organizations
+### Vulnerabilities
 
 ```
-client.organizations
-=>  [#<Threatstack::Organization::Organization:0x007fa262b0b2e0 @raw={...}> ]
+client.vulnerabilities
+client.vulnerability('CVE-123')
 ```
+## TODO: Write docs for all the things (contributions welcome)
 
-### Audit Logs
-
-```
-client.logs
-=>  [#<Threatstack::Log::Log:0x007fa262b0b2e0 @raw={...}>]
-client.search('query')
-=>  [#<Threatstack::Log::Log:0x007fa262b0b2e0 @raw={...}>]
-```
 
 ## Development
 
