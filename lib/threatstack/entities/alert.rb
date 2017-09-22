@@ -1,20 +1,26 @@
-require 'threatstack/entities/event'
-require 'threatstack/entities/rule'
 require 'threatstack/serializable'
 
 module Threatstack
   class Alert
     include Serializable
-    attributes :latest_events, :rule
-
-    def latest_events
-      raw['latest_events'].map do |event|
-        Event.new(event)
-      end
-    end
+    attributes :id, :title, :type, :created_at, :event_count, :is_dismissed, :dismissed_at,
+      :dismissed_reason, :dismissed_reason_text, :dismissed_by, :severity, :agent_id,
+      :rule_id, :ruleset_id, :event_ids
 
     def rule
-      Rule.new(raw['rule'])
+      client.rule(rule_id)
+    end
+
+    def agent
+      client.agent(agent_id)
+    end
+
+    def ruleset
+      client.ruleset(ruleset_id)
+    end
+
+    def events
+      event_ids&.map{ |event_id| client.event(id, event_id)}
     end
   end
 end
