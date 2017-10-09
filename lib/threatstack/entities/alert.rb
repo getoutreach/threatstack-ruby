@@ -8,7 +8,7 @@ module Threatstack
       :rule_id, :ruleset_id, :event_ids
 
     def rule
-      client.rule(rule_id)
+      client.rule(ruleset_id, rule_id)
     end
 
     def agent
