@@ -155,8 +155,8 @@ module Threatstack
     end
 
     def build_uri(path, params = {})
-      params[:start] = params[:start].utc if params[:start]
-      params[:end] = params[:end].utc if params[:end]
+      params[:from] = params[:from].utc if params[:from]
+      params[:until] = params[:until].utc if params[:until]
       params[:fields] = params[:fields].join(',') if params[:fields]&.is_a?(Array)
 
       query = params.each_pair.map { |k, v| "#{k}=#{v}" }.join('&')
