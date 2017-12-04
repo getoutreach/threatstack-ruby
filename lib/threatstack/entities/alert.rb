@@ -20,7 +20,7 @@ module Threatstack
     end
 
     def events
-      event_ids&.map{ |event_id| client.event(id, event_id)}
+      client.events(id)
     end
   end
 end

@@ -1,7 +1,7 @@
 require 'test_helper'
 
 describe Threatstack::Client do
-  let(:client) { Threatstack::Client.new("fake_token") }
+  let(:client) { Threatstack::Client.new("fake_token", '', '') }
   let(:key) { nil }
   let(:payload_singular) { {'foo' => 'bar'} }
   let(:payload_plural) { {key => [payload_singular]} }
@@ -17,12 +17,16 @@ describe Threatstack::Client do
     end
 
     it 'returns an Alert object in an array' do
+      alert1 = {
+        'id': 'foo'
+      }
+
       client.stub :do_request, payload_plural do
-        a = client.alerts.first
+        a = client.alerts('active').first
         a.class.name.must_equal "Threatstack::Alert"
         a.foo.must_equal "bar"
 
-        b = client.dismissed_alerts.first
+        b = client.alerts('dismissed').first
         b.class.name.must_equal "Threatstack::Alert"
         b.foo.must_equal "bar"
       end
@@ -33,8 +37,8 @@ describe Threatstack::Client do
         a.foo.must_equal 'bar'
       end
 
-      client.stub :do_request, { 'details' => {'foo' => 'bar'}} do
-        a = client.event('a', 'b')
+      client.stub :do_request, { 'events' => [{'foo' => 'bar'}]} do
+        a = client.events('a').first
         a.class.name.must_equal 'Threatstack::GenericObject'
         a.foo.must_equal 'bar'
       end
@@ -53,7 +57,7 @@ describe Threatstack::Client do
 
     it 'returns an Agent object in an array' do
       client.stub :do_request, payload_plural do
-        a = client.agents.first
+        a = client.agents('online').first
         a.class.name.must_equal "Threatstack::Agent"
         a.foo.must_equal "bar"
       end
@@ -62,19 +66,21 @@ describe Threatstack::Client do
 
   describe 'when entity is vulnerability' do
     let(:key) { 'cves'}
-    it 'returns a Cve object' do
-      client.stub :do_request, payload_singular do
-        a = client.vulnerability('1')
-        a.class.name.must_equal 'Threatstack::Cve'
-        a.foo.must_equal 'bar'
-      end
-    end
+
+    stub_response = {
+      'cveNumber' => '1', 
+      'reportedPackage' => 'package',
+      'systemPacage' => 'system',
+      'vectorType' => 'network',
+      'isSuppressed' => true,
+      'severity' => 'high'
+    }
 
     it 'returns a Cve object in an array' do
-      client.stub :do_request, payload_plural do
+      client.stub :do_request, { 'cves' => [stub_response]} do
         a = client.vulnerabilities.first
         a.class.name.must_equal 'Threatstack::Cve'
-        a.foo.must_equal 'bar'
+        a.cve_number.must_equal '1'
       end
     end
 
@@ -86,13 +92,11 @@ describe Threatstack::Client do
       end
     end
 
-    it 'returns a list of cve strings' do
-      client.stub :do_request, {'cves' => ['CVE-123'] } do
-        a = client.server_vulnerabilities('server').first
-        a.must_equal 'CVE-123'
-
-        b = client.cves_by_agent('1').first
-        b.must_equal 'CVE-123'
+    it 'returns a list of affected servers' do
+      client.stub :do_request, {'servers' => [{'agent_id' => 1, 'hostname' => 'host'}] } do
+        a = client.affected_servers('server').first
+        expected = {'agent_id' => 1, 'hostname' => 'host'}
+        a.must_equal expected
       end
     end
 
@@ -144,7 +148,7 @@ describe Threatstack::Client do
     let(:key) { 'servers' }
     it 'returns a list of servers' do
       client.stub :do_request, payload_plural do
-        a = client.servers.first
+        a = client.instances.first
         a.foo.must_equal 'bar'
         a.class.name.must_equal 'Threatstack::GenericObject'
       end
