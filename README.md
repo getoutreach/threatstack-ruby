@@ -25,7 +25,7 @@ Or install it yourself as:
 You can access all attributes on responses thanks to the method_missing function in Ruby. We only munged the attributes that don't correspond to snake_case. If you want to see a list of all available attributes for a serializable response object, simply do something like this:
 
 ```
-client = Threatstack::Client.new(API_TOKEN, organization_id: ORG_ID, api_key: API_KEY)
+client = Threatstack::Client.new(organization_id: ORG_ID, api_key: API_KEY)
 [threatstack] main> ts.alerts("active").first.attrs
 => [:id,
  :title,
@@ -48,7 +48,7 @@ client = Threatstack::Client.new(API_TOKEN, organization_id: ORG_ID, api_key: AP
 ### Alerts
 
 ```
-client = Threatstack::Client.new(API_TOKEN, organization_id: ORG_ID)
+client = Threatstack::Client.new(organization_id: ORG_ID)
 ## All these are optional url params. See the Threatstack API Docs
 alert = client.alerts("active", start: 3.days.ago, end: Time.now, count: 5).last
 => #<Threatstack::Alert:0x007fde0b01cbd8
