@@ -25,8 +25,8 @@ Or install it yourself as:
 You can access all attributes on responses thanks to the method_missing function in Ruby. We only munged the attributes that don't correspond to snake_case. If you want to see a list of all available attributes for a serializable response object, simply do something like this:
 
 ```
-client = Threatstack::Client.new(API_TOKEN, organization_id: ORG_ID)
-[threatstack] main> ts.alerts.first.attrs
+client = Threatstack::Client.new(ORG_ID, USER_ID, API_KEY)
+[threatstack] main> ts.alerts("active").first.attrs
 => [:id,
  :title,
  :type,
@@ -48,9 +48,9 @@ client = Threatstack::Client.new(API_TOKEN, organization_id: ORG_ID)
 ### Alerts
 
 ```
-client = Threatstack::Client.new(API_TOKEN, organization_id: ORG_ID)
+client = Threatstack::Client.new(ORG_ID, USER_ID, API_KEY)
 ## All these are optional url params. See the Threatstack API Docs
-alert = client.alerts(start: 3.days.ago, end: Time.now, count: 5).last
+alert = client.alerts("active", start: 3.days.ago, end: Time.now, count: 5).last
 => #<Threatstack::Alert:0x007fde0b01cbd8
  @raw=
   {"created_at"=>1496850520000,
@@ -66,7 +66,7 @@ count = alert.count
 You can also limit the response if that's important to you:
 
 ```
-client.alerts(fields: ['title', 'alerts'])
+client.alerts("active", fields: ['title', 'alerts'])
 => [#<Threatstack::Alert:0x007fd61348c768
   @raw={"title"=>"CloudTrail Activity (IAM Policy Changes) : CreateAccessKey by ryan_canty", "severity"=>2}>]
 ```
@@ -80,7 +80,7 @@ client.alert('1234567890')
 ### Agents
 
 ```
-client.agents
+client.agents('online')
 =>  [#<Threatstack::Response:0x007fa262b0b2e0 @raw={...}> ]
 client.agent('123123123')
 =>  #<Threatstack::Agent:0x007fa262b0b2e0 @raw={...}>
